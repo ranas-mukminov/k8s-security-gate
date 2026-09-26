@@ -1,0 +1,55 @@
+name: Self-test Security Gate
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "examples/fixtures/**"
+      - "scripts/gate.sh"
+      - ".github/workflows/self-test-gate.yml"
+      - ".github/workflows/reusable-security-gate.yml"
+      - "examples/secure-k3s-gitops-template.yml"
+  pull_request:
+    paths:
+      - "examples/fixtures/**"
+      - "scripts/gate.sh"
+      - ".github/workflows/self-test-gate.yml"
+      - ".github/workflows/reusable-security-gate.yml"
+      - "examples/secure-k3s-gitops-template.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  clean-should-pass-minimal:
+    name: Clean fixture (minimal scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PyYAML
+        run: pip3 install --user pyyaml
+      - name: Run gate on clean fixture
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          ./scripts/gate.sh examples/fixtures/clean
+
+  dirty-should-fail:
+    name: Dirty fixture must fail
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PyYAML
+        run: pip3 install --user pyyaml
+      - name: Expect non-zero on dirty fixture
+        run: |
+          set +e
+          ./scripts/gate.sh examples/fixtures/dirty
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            echo "Expected dirty fixture to fail" >&2
+            exit 1
+          fi
+          echo "Dirty fixture failed as expected (rc=$rc)"
+          test -f .gate-report/report.md
+          cat .gate-report/report.md >> "$GITHUB_STEP_SUMMARY"
