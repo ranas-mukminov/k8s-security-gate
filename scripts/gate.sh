@@ -31,20 +31,26 @@ findings = []
 def containers_from(doc):
     kind = doc.get("kind")
     if kind == "Pod":
-        return doc.get("spec", {}).get("containers", []) or [], doc.get("spec", {})
-    if kind in ("Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job"):
-        spec = doc.get("spec", {}).get("template", {}).get("spec", {})
-        return spec.get("containers", []) or [], spec
-    if kind == "CronJob":
+        spec = doc.get("spec", {}) or {}
+    elif kind in ("Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job"):
+        spec = doc.get("spec", {}).get("template", {}).get("spec", {}) or {}
+    elif kind == "CronJob":
         spec = (
             doc.get("spec", {})
             .get("jobTemplate", {})
             .get("spec", {})
             .get("template", {})
             .get("spec", {})
-        )
-        return spec.get("containers", []) or [], spec
-    return [], {}
+        ) or {}
+    else:
+        return [], {}
+    # Include init/ephemeral — privileged initContainers otherwise bypass the gate.
+    containers = (
+        (spec.get("containers") or [])
+        + (spec.get("initContainers") or [])
+        + (spec.get("ephemeralContainers") or [])
+    )
+    return containers, spec
 
 def scan_file(path: Path):
     text = path.read_text(encoding="utf-8", errors="replace")
