@@ -1,31 +1,25 @@
-Thanks for helping make GitHub safe for everyone.
+# Security Policy
 
-# Security
+This repository is maintained by **ranas-mukminov** (Ranas Security / [run-as-daemon.dev](https://run-as-daemon.dev)). It is **not** a GitHub-owned project and is outside GitHub’s bug bounty scope.
 
-GitHub takes the security of our software products and services seriously, including all of the open source code repositories managed through our GitHub organizations, such as [GitHub](https://github.com/GitHub).
+## Reporting a vulnerability
 
-Even though [open source repositories are outside of the scope of our bug bounty program](https://bounty.github.com/index.html#scope) and therefore not eligible for bounty rewards, we will ensure that your finding gets passed along to the appropriate maintainers for remediation. 
+**Please do not open a public issue for security reports.**
 
-## Reporting Security Issues
+Prefer one of:
 
-If you believe you have found a security vulnerability in any GitHub-owned repository, please report it to us through coordinated disclosure.
+1. **GitHub private vulnerability reporting** — use *Security* → *Report a vulnerability* on this repository (enable if not already on).
+2. **Email:** `security@run-as-daemon.dev` (or Telegram [@run_as_daemon_dev](https://t.me/run_as_daemon_dev) if email is unavailable).
 
-**Please do not report security vulnerabilities through public GitHub issues, discussions, or pull requests.**
+Include, when possible:
 
-Instead, please send an email to opensource-security[@]github.com.
+- Affected path / commit / tag
+- Impact and a minimal reproduction
+- Whether the issue is in the checkov path or the embedded minimal scanner in `scripts/gate.sh`
 
-Please include as much of the information listed below as you can to help us better understand and resolve the issue:
+We aim to acknowledge reports within a few business days.
 
-  * The type of issue (e.g., buffer overflow, SQL injection, or cross-site scripting)
-  * Full paths of source file(s) related to the manifestation of the issue
-  * The location of the affected source code (tag/branch/commit or direct URL)
-  * Any special configuration required to reproduce the issue
-  * Step-by-step instructions to reproduce the issue
-  * Proof-of-concept or exploit code (if possible)
-  * Impact of the issue, including how an attacker might exploit the issue
+## Scope notes
 
-This information will help us triage your report more quickly.
-
-## Policy
-
-See [GitHub's Safe Harbor Policy](https://docs.github.com/en/site-policy/security-policies/github-bug-bounty-program-legal-safe-harbor#1-safe-harbor-terms)
+- The embedded scanner is a **fallback** when checkov is missing; prefer checkov in CI for production gates.
+- Example fixtures under `examples/` may intentionally contain insecure manifests for self-tests.
