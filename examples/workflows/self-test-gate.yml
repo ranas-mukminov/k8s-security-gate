@@ -1,3 +1,7 @@
+# NOTE: Canonical copy for GitHub Actions is
+#   .github/workflows/self-test-gate.yml
+# This examples/ path is for documentation / copy-paste only;
+# Actions does not load workflows from examples/.
 name: Self-test Security Gate
 
 on:

@@ -1,3 +1,7 @@
+# NOTE: Canonical copy for GitHub Actions is
+#   .github/workflows/reusable-security-gate.yml
+# This examples/ path is for documentation / copy-paste only;
+# Actions does not load workflows from examples/.
 name: Reusable K8s Security Gate
 
 on:

@@ -29,27 +29,28 @@ jobs:
         run: |
           set -euo pipefail
           dir="${{ inputs.directory }}"
-          if [ ! -d "$dir" ]; then
+          if [ ! -d "$dir" ] || ! find "$dir" -type f \( -name '*.yaml' -o -name '*.yml' \) | grep -q .; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "Directory $dir missing — skipping gate"
-            exit 0
-          fi
-          count=$(find "$dir" -type f \( -name '*.yaml' -o -name '*.yml' \) | wc -l | tr -d ' ')
-          if [ "$count" -eq 0 ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "No YAML under $dir — skipping gate"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Install PyYAML
+      - name: Checkov gate
         if: steps.paths.outputs.skip != 'true'
-        run: pip3 install --user pyyaml
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: ${{ inputs.directory }}
+          framework: kubernetes
+          output_format: cli,sarif
+          output_file_path: console,checkov.sarif
+          soft_fail: false
+          soft_fail_on: ${{ inputs.soft_fail_on }}
+          download_external_modules: true
 
-      - name: Run security gate
-        if: steps.paths.outputs.skip != 'true'
-        env:
-          SOFT_FAIL_ON: ${{ inputs.soft_fail_on }}
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          ./scripts/gate.sh "${{ inputs.directory }}"
+      - name: Upload report
+        if: always() && steps.paths.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-sarif
+          path: checkov.sarif
+          if-no-files-found: ignore
