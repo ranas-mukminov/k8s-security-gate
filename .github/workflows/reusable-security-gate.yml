@@ -1,0 +1,56 @@
+name: Reusable K8s Security Gate
+
+on:
+  workflow_call:
+    inputs:
+      directory:
+        description: Path to scan (Kubernetes manifests)
+        type: string
+        required: false
+        default: "cluster"
+      soft_fail_on:
+        description: Severities that do not fail the job
+        type: string
+        required: false
+        default: "MEDIUM,LOW"
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Fail on CRITICAL/HIGH
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if no YAML
+        id: paths
+        run: |
+          set -euo pipefail
+          dir="${{ inputs.directory }}"
+          if [ ! -d "$dir" ] || ! find "$dir" -type f \( -name '*.yaml' -o -name '*.yml' \) | grep -q .; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkov gate
+        if: steps.paths.outputs.skip != 'true'
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: ${{ inputs.directory }}
+          framework: kubernetes
+          output_format: cli,sarif
+          output_file_path: console,checkov.sarif
+          soft_fail: false
+          soft_fail_on: ${{ inputs.soft_fail_on }}
+          download_external_modules: true
+
+      - name: Upload report
+        if: always() && steps.paths.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-sarif
+          path: checkov.sarif
+          if-no-files-found: ignore

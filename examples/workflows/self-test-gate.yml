@@ -1,3 +1,4 @@
+# Docs-only copy. Canonical workflow: .github/workflows/self-test-gate.yml
 name: Self-test Security Gate
 
 on:
@@ -31,7 +32,7 @@ jobs:
       - name: Run gate on clean fixture
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          ./scripts/gate.sh examples/fixtures/clean
+          bash scripts/gate.sh examples/fixtures/clean
 
   dirty-should-fail:
     name: Dirty fixture must fail
@@ -43,7 +44,7 @@ jobs:
       - name: Expect non-zero on dirty fixture
         run: |
           set +e
-          ./scripts/gate.sh examples/fixtures/dirty
+          bash scripts/gate.sh examples/fixtures/dirty
           rc=$?
           set -e
           if [ "$rc" -eq 0 ]; then
