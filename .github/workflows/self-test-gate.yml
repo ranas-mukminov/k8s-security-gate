@@ -31,7 +31,7 @@ jobs:
       - name: Run gate on clean fixture
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          ./scripts/gate.sh examples/fixtures/clean
+          bash scripts/gate.sh examples/fixtures/clean
 
   dirty-should-fail:
     name: Dirty fixture must fail
@@ -43,11 +43,15 @@ jobs:
       - name: Expect non-zero on dirty fixture
         run: |
           set +e
-          ./scripts/gate.sh examples/fixtures/dirty
+          bash scripts/gate.sh examples/fixtures/dirty
           rc=$?
           set -e
           if [ "$rc" -eq 0 ]; then
             echo "Expected dirty fixture to fail" >&2
+            exit 1
+          fi
+          if [ "$rc" -eq 126 ] || [ "$rc" -eq 127 ]; then
+            echo "gate.sh could not be executed (rc=$rc)" >&2
             exit 1
           fi
           echo "Dirty fixture failed as expected (rc=$rc)"
