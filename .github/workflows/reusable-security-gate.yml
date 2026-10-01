@@ -1,0 +1,55 @@
+name: Reusable K8s Security Gate
+
+on:
+  workflow_call:
+    inputs:
+      directory:
+        description: Path to scan (Kubernetes manifests)
+        type: string
+        required: false
+        default: "cluster"
+      soft_fail_on:
+        description: Severities that do not fail the job
+        type: string
+        required: false
+        default: "MEDIUM,LOW"
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Fail on CRITICAL/HIGH
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if no YAML
+        id: paths
+        run: |
+          set -euo pipefail
+          dir="${{ inputs.directory }}"
+          if [ ! -d "$dir" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Directory $dir missing — skipping gate"
+            exit 0
+          fi
+          count=$(find "$dir" -type f \( -name '*.yaml' -o -name '*.yml' \) | wc -l | tr -d ' ')
+          if [ "$count" -eq 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "No YAML under $dir — skipping gate"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install PyYAML
+        if: steps.paths.outputs.skip != 'true'
+        run: pip3 install --user pyyaml
+
+      - name: Run security gate
+        if: steps.paths.outputs.skip != 'true'
+        env:
+          SOFT_FAIL_ON: ${{ inputs.soft_fail_on }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          ./scripts/gate.sh "${{ inputs.directory }}"
