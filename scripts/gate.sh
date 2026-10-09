@@ -70,7 +70,10 @@ def scan_file(path: Path):
                 findings.append({"file": str(path), "resource": f"{meta}:{name}", "severity": "CRITICAL", "id": "CKV_K8S_16", "message": "Container must not run privileged"})
             if sc.get("allowPrivilegeEscalation") is True:
                 findings.append({"file": str(path), "resource": f"{meta}:{name}", "severity": "HIGH", "id": "CKV_K8S_20", "message": "allowPrivilegeEscalation should be false"})
-            if sc.get("runAsNonRoot") is not True:
+            # Container-level value overrides pod-level securityContext (k8s semantics).
+            pod_sc = pod_spec.get("securityContext") or {}
+            run_as_non_root = sc.get("runAsNonRoot", pod_sc.get("runAsNonRoot"))
+            if run_as_non_root is not True:
                 findings.append({"file": str(path), "resource": f"{meta}:{name}", "severity": "HIGH", "id": "CKV_K8S_40", "message": "Container should set runAsNonRoot: true"})
 
 root = Path(scan_path)
