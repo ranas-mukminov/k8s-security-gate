@@ -40,28 +40,44 @@ jobs:
         id: paths
         run: |
           set -euo pipefail
-          targets=()
+          any=false
           for d in cluster infrastructure; do
             if find "$d" -type f \( -name '*.yaml' -o -name '*.yml' \) 2>/dev/null | grep -q .; then
-              targets+=("$d")
+              echo "${d}=true" >> "$GITHUB_OUTPUT"
+              any=true
+            else
+              echo "${d}=false" >> "$GITHUB_OUTPUT"
             fi
           done
-          if [ ${#targets[@]} -eq 0 ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+          echo "skip=$([ "$any" = true ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
+          if [ "$any" != true ]; then
             echo "No Kubernetes YAML under cluster/ or infrastructure/ — skipping gate."
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-            echo "dirs=${targets[*]}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run Checkov (fail on CRITICAL/HIGH)
-        if: steps.paths.outputs.skip != 'true'
+      # checkov-action takes a single `directory`. A space-joined value such as
+      # "cluster infrastructure" is passed as ONE path: checkov logs
+      # "Directory ... does not exist; skipping it" and exits 0, so the gate
+      # would pass without scanning anything. Scan each directory separately.
+      - name: Run Checkov on cluster/ (fail on CRITICAL/HIGH)
+        if: steps.paths.outputs.cluster == 'true'
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: ${{ steps.paths.outputs.dirs }}
+          directory: cluster
           framework: kubernetes
           output_format: cli,sarif
-          output_file_path: console,checkov.sarif
+          output_file_path: console,checkov-cluster.sarif
+          soft_fail: false
+          soft_fail_on: MEDIUM,LOW
+          download_external_modules: true
+
+      - name: Run Checkov on infrastructure/ (fail on CRITICAL/HIGH)
+        if: (success() || failure()) && steps.paths.outputs.infrastructure == 'true'
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infrastructure
+          framework: kubernetes
+          output_format: cli,sarif
+          output_file_path: console,checkov-infrastructure.sarif
           soft_fail: false
           soft_fail_on: MEDIUM,LOW
           download_external_modules: true
@@ -71,7 +87,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: checkov-sarif
-          path: checkov.sarif
+          path: |
+            checkov-cluster.sarif
+            checkov-infrastructure.sarif
           if-no-files-found: ignore
 
       - name: Job summary
